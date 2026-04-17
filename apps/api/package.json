@@ -1,0 +1,14 @@
+{
+  "name": "@pancake/api",
+  "version": "1.0.0",
+  "description": "FastAPI backend for Pancake Trading Agent",
+  "scripts": {
+    "dev": "python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000",
+    "start": "python -m uvicorn src.main:app --host 0.0.0.0 --port 8000",
+    "test": "pytest tests/ -v",
+    "lint": "ruff check src/",
+    "format": "black src/"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

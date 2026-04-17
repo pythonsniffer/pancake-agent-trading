@@ -1,0 +1,142 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 222 47% 5%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 7%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 47% 7%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 32 100% 49%;
+  --primary-foreground: 222 47% 11%;
+  --secondary: 217 33% 17%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 32 100% 49%;
+  --accent-foreground: 222 47% 11%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
+  --ring: 32 100% 49%;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-pancake-400 to-pancake-300 bg-clip-text text-transparent;
+  }
+
+  .status-badge {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  .status-running {
+    @apply bg-crypto-green/20 text-crypto-green;
+  }
+
+  .status-paused {
+    @apply bg-pancake-500/20 text-pancake-500;
+  }
+
+  .status-error {
+    @apply bg-crypto-red/20 text-crypto-red;
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-pancake-500/10;
+  }
+
+  .btn-primary {
+    @apply bg-pancake-500 hover:bg-pancake-600 text-white font-medium
+           px-4 py-2 rounded-lg transition-colors duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-white/5 hover:bg-white/10 text-white font-medium
+           px-4 py-2 rounded-lg transition-colors duration-200
+           border border-white/10;
+  }
+
+  .input-field {
+    @apply bg-white/5 border border-white/10 rounded-lg px-3 py-2
+           text-white placeholder:text-muted-foreground
+           focus:outline-none focus:ring-2 focus:ring-pancake-500/50
+           focus:border-pancake-500/50;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(222, 47%, 7%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(217, 33%, 25%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(217, 33%, 35%);
+}
+
+/* Recharts customization */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: hsl(217, 33%, 17%);
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}
+
+/* Chart animations */
+.chart-line {
+  animation: drawLine 2s ease-out forwards;
+}
+
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

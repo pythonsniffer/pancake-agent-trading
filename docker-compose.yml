@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: pancake-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-pancake}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pancake123}
+      POSTGRES_DB: ${DB_NAME:-trading_agent}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/agents/src/db/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - pancake-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pancake}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: pancake-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pancake-network
+    command: redis-server --appendonly yes
+
+  # Chroma Vector Database for agent memory
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: pancake-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    networks:
+      - pancake-network
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+
+  # FastAPI Backend
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: pancake-api
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-pancake}:${DB_PASSWORD:-pancake123}@postgres:5432/${DB_NAME:-trading_agent}
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMA_URL=http://chroma:8000
+      - BSC_RPC_URL=${BSC_RPC_URL:-https://bsc-dataseed.binance.org/}
+      - ETH_RPC_URL=${ETH_RPC_URL:-}
+      - ARB_RPC_URL=${ARB_RPC_URL:-}
+      - PRIVATE_KEY=${PRIVATE_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      chroma:
+        condition: service_started
+    networks:
+      - pancake-network
+    volumes:
+      - ./apps/api:/app
+      - /app/__pycache__
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Agent Orchestration Service
+  agents:
+    build:
+      context: .
+      dockerfile: services/agents/Dockerfile
+    container_name: pancake-agents
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-pancake}:${DB_PASSWORD:-pancake123}@postgres:5432/${DB_NAME:-trading_agent}
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMA_URL=http://chroma:8000
+      - API_URL=http://api:8000
+      - BSC_RPC_URL=${BSC_RPC_URL:-https://bsc-dataseed.binance.org/}
+      - PRIVATE_KEY=${PRIVATE_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      - api
+      - redis
+      - chroma
+    networks:
+      - pancake-network
+    volumes:
+      - ./services/agents:/app
+      - /app/__pycache__
+    command: python -m src.main
+
+  # Market Data Service
+  market-data:
+    build:
+      context: .
+      dockerfile: services/market-data/Dockerfile
+    container_name: pancake-market-data
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - BSC_RPC_URL=${BSC_RPC_URL:-https://bsc-dataseed.binance.org/}
+      - ETH_RPC_URL=${ETH_RPC_URL:-}
+      - ARB_RPC_URL=${ARB_RPC_URL:-}
+    depends_on:
+      - redis
+    networks:
+      - pancake-network
+    volumes:
+      - ./services/market-data:/app
+      - /app/__pycache__
+    command: python -m src.main
+
+  # Next.js Frontend
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: pancake-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8001
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8001/ws
+    depends_on:
+      - api
+    networks:
+      - pancake-network
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+
+networks:
+  pancake-network:
+    driver: bridge
